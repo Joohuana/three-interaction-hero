@@ -1,33 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Elementeverse Engine</title>
-
-  <!-- Load THREE and GSAP from CDN (Cargo expects iframed dependencies) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      overflow: hidden;
-      background: #1c1c1e;
-    }
-    #webgl-target {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Elementeverse Engine</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1c1c1e; } /* Silvery Grey */
+        canvas { display: block; }
+    </style>
+    <!-- THREE.JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <script>
+        // --- 1. SETUP SCENE ---
+        const bgHex = 0x1c1c1e; // Gunmetal Grey
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(bgHex);
+        scene.fog = new THREE.FogExp2(bgHex, 0.025); // Atmospheric Fog
 
-  <div id="webgl-target"></div>
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 6;
 
-  <!-- Your engine file -->
-  <script src="engine.js"></script>
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
 
+        // --- 2. OBJECTS (Future Nomad Talisman) ---
+        const geometry = new THREE.IcosahedronGeometry(1.5, 1);
+        
+        // Wireframe (Bauhaus Structure)
+        const wireframe = new THREE.LineSegments(
+            new THREE.WireframeGeometry(geometry),
+            new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.08, transparent: true })
+        );
+        scene.add(wireframe);
+
+        // Inner Core (Tech-Zen)
+        const material = new THREE.MeshPhysicalMaterial({
+            color: 0xaaaaaa, // Silver
+            roughness: 0.2,
+            metalness: 0.9,
+            transmission: 0.1,
+            clearcoat: 1.0
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+
+        // --- 3. LIGHTING (Seasonally Aware) ---
+        // Auto-detect season based on month
+        const month = new Date().getMonth() + 1;
+        let seasonColor = 0x1a3c5a; // Winter/Water default
+        if (month >= 2 && month <= 4) seasonColor = 0x4a5d23; // Wood
+        else if (month >= 5 && month <= 6) seasonColor = 0xff4500; // Fire
+        else if (month >= 9 && month <= 10) seasonColor = 0xa0a0a0; // Metal
+        
+        const light = new THREE.PointLight(seasonColor, 2, 20);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // --- 4. INTERACTION LOGIC (The Bridge) ---
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        // Target values for smooth lerping
+        let targetX = 0;
+        let targetY = 0;
+
+        // LISTEN FOR MESSAGES FROM CARGO
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'MOUSE_MOVE') {
+                // Normalize coordinates (-1 to 1)
+                targetX = event.data.x;
+                targetY = event.data.y;
+            }
+        });
+
+        // --- 5. ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // Smooth Interaction (Lerp)
+            mouseX += (targetX - mouseX) * 0.05;
+            mouseY += (targetY - mouseY) * 0.05;
+
+            // Rotate Object based on mouse + time
+            mesh.rotation.x = mouseY * 0.5 + time * 0.1;
+            mesh.rotation.y = mouseX * 0.5 + time * 0.15;
+            
+            wireframe.rotation.copy(mesh.rotation);
+
+            // Float effect
+            mesh.position.y = Math.sin(time * 0.5) * 0.1;
+            wireframe.position.y = mesh.position.y;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Resize Handle
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
